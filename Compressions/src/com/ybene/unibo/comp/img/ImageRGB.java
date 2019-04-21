@@ -21,7 +21,7 @@ public class ImageRGB {
 			imageHeight = in.getHeight();
 			imageWidth = in.getWidth();
 			
-			// Create the 2D array
+			// Create the 2D arrays
 			imageRGB = new int[imageHeight][imageWidth];
 			imageRed = new int[imageHeight][imageWidth];
 			imageGreen = new int[imageHeight][imageWidth];
@@ -72,5 +72,37 @@ public class ImageRGB {
 	}
 	public int[][] getImageBlue() {
 		return imageBlue;
+	}
+	
+	// Create red, green and blue images
+	public void createImagesRGB(String name, String format) {
+		
+		// Create files
+		File fileRed = new File("./ressources/" + name + "Red" + "." + format);
+		File fileGreen = new File("./ressources/" + name + "Green" + "." + format);
+		File fileBlue = new File("./ressources/" + name + "Blue" + "." + format);
+		
+		// Create buffered images
+		BufferedImage bufferedRedImage = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
+		BufferedImage bufferedGreenImage = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
+		BufferedImage bufferedBlueImage = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
+		
+		// Fill buffered images
+		for (int widthIndex = 0 ; widthIndex < imageWidth ; widthIndex++) {
+			for (int heightIndex = 0 ; heightIndex < imageHeight ; heightIndex++) {
+				bufferedRedImage.setRGB(widthIndex, heightIndex, imageRed[heightIndex][widthIndex]);
+				bufferedGreenImage.setRGB(widthIndex, heightIndex, imageGreen[heightIndex][widthIndex]);
+				bufferedBlueImage.setRGB(widthIndex, heightIndex, imageBlue[heightIndex][widthIndex]);
+			}
+		}
+		
+		// Save images
+		try {
+			ImageIO.write(bufferedRedImage, format, fileRed);
+			ImageIO.write(bufferedGreenImage, format, fileGreen);
+			ImageIO.write(bufferedBlueImage, format, fileBlue);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }
