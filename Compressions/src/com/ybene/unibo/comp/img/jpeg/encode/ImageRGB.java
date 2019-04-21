@@ -1,4 +1,4 @@
-package com.ybene.unibo.comp.img;
+package com.ybene.unibo.comp.img.jpeg.encode;
 
 import java.awt.image.BufferedImage;
 import java.io.File;

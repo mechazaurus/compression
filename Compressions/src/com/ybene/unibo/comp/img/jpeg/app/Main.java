@@ -1,6 +1,8 @@
-package com.ybene.unibo.comp.img;
+package com.ybene.unibo.comp.img.jpeg.app;
 
 import java.io.File;
+
+import com.ybene.unibo.comp.img.jpeg.encode.ImageRGB;
 
 public class Main {
 
