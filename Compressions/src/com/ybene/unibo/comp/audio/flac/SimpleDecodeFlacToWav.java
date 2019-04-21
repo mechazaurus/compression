@@ -1,4 +1,4 @@
-package com.ybene.unibo.comp.audio;
+package com.ybene.unibo.comp.audio.flac;
 
 /* 
  * Simple FLAC decoder (Java)
