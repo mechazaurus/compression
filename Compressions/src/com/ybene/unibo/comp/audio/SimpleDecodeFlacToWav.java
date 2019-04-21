@@ -1,4 +1,5 @@
 package com.ybene.unibo.comp.audio;
+
 /* 
  * Simple FLAC decoder (Java)
  * 
@@ -27,58 +28,99 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.zip.DataFormatException;
 
-
 public final class SimpleDecodeFlacToWav {
 	
 	public static void main(String[] args) throws IOException, DataFormatException {
+
+		// Files used
+		File inputFile = new File("./ressources/Sounds/austin_powers_sharks_encoded.flac");
+		File outputFile = new File("./ressources/Sounds/austin_powers_sharks_decoded.wav");
 		
-		if (args.length != 2) {
-			System.err.println("Usage: java SimpleDecodeFlacToWav InFile.flac OutFile.wav");
-			System.exit(1);
-			return;
-		}
-		
-		try (BitInputStream in = new BitInputStream(new BufferedInputStream(new FileInputStream(args[0])));
-				OutputStream out = new BufferedOutputStream(new FileOutputStream(args[1]))) {
+		// Simply decode the input FLAC file
+		try (BitInputStream in = new BitInputStream(new BufferedInputStream(new FileInputStream(inputFile)));
+				OutputStream out = new BufferedOutputStream(new FileOutputStream(outputFile))) {
 			decodeFile(in, out);
 		}
 	}
 	
-	
 	public static void decodeFile(BitInputStream in, OutputStream out) throws IOException, DataFormatException {
-		// Handle FLAC header and metadata blocks
-		if (in.readUint(32) != 0x664C6143)
-			throw new DataFormatException("Invalid magic string");
+		
+		// Handle FLAC header and metadata blocks (0x664C6143 = "fLac")
+		if (in.readUint(32) != 0x664C6143) {
+			throw new DataFormatException("Invalid magic string : should be \"fLac\"");			
+		}
+		
+		// Initialization of current block informations
 		int sampleRate = -1;
 		int numChannels = -1;
 		int sampleDepth = -1;
 		long numSamples = -1;
-		for (boolean last = false; !last; ) {
+		
+		// Keep going while there are still blocks
+		boolean last = false;
+		
+		while (!last) {
+			
+			// Check if it is the last block
+			// '1' if this block is the last metadata block before the audio blocks, '0' otherwise.
 			last = in.readUint(1) != 0;
+			
+			// Metadata block header
 			int type = in.readUint(7);
 			int length = in.readUint(24);
-			if (type == 0) {  // Stream info block
+			
+			// Stream info block (if 0 then STREAMINFO, check BLOCK_TYPE in doc)
+			if (type == 0) {
+				// SKIP -- The minimum block size (in samples) used in the stream.
 				in.readUint(16);
+				// SKIP -- The maximum block size (in samples) used in the stream.
+				//         (Minimum blocksize == maximum blocksize) implies a fixed-blocksize stream.
 				in.readUint(16);
+				// SKIP -- The minimum frame size (in bytes) used in the stream.
+				//         May be 0 to imply the value is not known.
 				in.readUint(24);
+				// SKIP -- The maximum frame size (in bytes) used in the stream.
+				//         May be 0 to imply the value is not known.
 				in.readUint(24);
+				
+				// Sample rate in Hz.
+				// Though 20 bits are available, the maximum sample rate is limited by the structure of frame headers to 655350Hz.
+				// Also, a value of 0 is invalid. 
 				sampleRate = in.readUint(20);
-				numChannels = in.readUint(3) + 1;
-				sampleDepth = in.readUint(5) + 1;
+				// Number of channels - 1.
+				// FLAC supports from 1 to 8 channels.
+				numChannels = in.readUint(3) + 1; // +1 due to -1
+				// Bits per sample -1.
+				// FLAC supports from 4 to 32 bits per sample.
+				// Currently the reference encoder and decoders only support up to 24 bits per sample.
+				sampleDepth = in.readUint(5) + 1; // +1 due to -1
+				// Total samples in stream.
+				// 'Samples' means inter-channel sample, i.e. one second of 44.1Khz audio will have 44100 samples regardless of the number of channels.
+				// A value of zero here means the number of total samples is unknown.
 				numSamples = (long)in.readUint(18) << 18 | in.readUint(18);
-				for (int i = 0; i < 16; i++)
+				// SKIP -- MD5 signature of the unencoded audio data.
+				// This allows the decoder to determine if an error exists in the audio data even when the error does not result in an invalid bitstream.
+				for (int i = 0;  i < 16 ; i++) {					
 					in.readUint(8);
+				}
 			} else {
-				for (int i = 0; i < length; i++)
-					in.readUint(8);
+				// SKIP -- MD5 signature of the unencoded audio data.
+				// This allows the decoder to determine if an error exists in the audio data even when the error does not result in an invalid bitstream.
+				for (int i = 0 ; i < length ; i++) {
+					in.readUint(8);		
+				}
 			}
 		}
-		if (sampleRate == -1)
-			throw new DataFormatException("Stream info metadata block absent");
-		if (sampleDepth % 8 != 0)
-			throw new RuntimeException("Sample depth not supported");
 		
-		// Start writing WAV file headers
+		// Errors handling
+		if (sampleRate == -1) {			
+			throw new DataFormatException("Stream info metadata block absent");
+		}
+		if (sampleDepth % 8 != 0) {
+			throw new RuntimeException("Sample depth not supported");			
+		}
+		
+		// Start writing WAV file headers (check WAV headers doc)
 		long sampleDataLen = numSamples * numChannels * (sampleDepth / 8);
 		writeString("RIFF", out);
 		writeLittleInt(4, (int)sampleDataLen + 36, out);
@@ -98,26 +140,29 @@ public final class SimpleDecodeFlacToWav {
 		while (decodeFrame(in, numChannels, sampleDepth, out));
 	}
 	
-	
+	// Write an int in the output file
 	private static void writeLittleInt(int numBytes, int val, OutputStream out) throws IOException {
-		for (int i = 0; i < numBytes; i++)
-			out.write(val >>> (i * 8));
+		for (int i = 0 ; i < numBytes ; i++) {
+			out.write(val >>> (i * 8));			
+		}
 	}
 	
+	// Write a string in the output file
 	private static void writeString(String s, OutputStream out) throws IOException {
 		out.write(s.getBytes(StandardCharsets.UTF_8));
 	}
 	
-	
-	private static boolean decodeFrame(BitInputStream in, int numChannels, int sampleDepth, OutputStream out)
-			throws IOException, DataFormatException {
+	// Method used to decode each frame of the file
+	private static boolean decodeFrame(BitInputStream in, int numChannels, int sampleDepth, OutputStream out) throws IOException, DataFormatException {
 		// Read a ton of header fields, and ignore most of them
 		int temp = in.readByte();
-		if (temp == -1)
+		if (temp == -1) {			
 			return false;
+		}
 		int sync = temp << 6 | in.readUint(6);
-		if (sync != 0x3FFE)
-			throw new DataFormatException("Sync code expected");
+		if (sync != 0x3FFE) {
+			throw new DataFormatException("Sync code expected");			
+		}
 		
 		in.readUint(1);
 		in.readUint(1);
@@ -170,7 +215,7 @@ public final class SimpleDecodeFlacToWav {
 		return true;
 	}
 	
-	
+	// Method to decode each sub frames
 	private static void decodeSubframes(BitInputStream in, int sampleDepth, int chanAsgn, int[][] result)
 			throws IOException, DataFormatException {
 		int blockSize = result[0].length;
@@ -203,7 +248,7 @@ public final class SimpleDecodeFlacToWav {
 		}
 	}
 	
-	
+	// Method to decode a single sub frame
 	private static void decodeSubframe(BitInputStream in, int sampleDepth, long[] result)
 			throws IOException, DataFormatException {
 		in.readUint(1);
@@ -231,7 +276,7 @@ public final class SimpleDecodeFlacToWav {
 			result[i] <<= shift;
 	}
 	
-	
+	// Method to decode a fixed prediction sub frame
 	private static void decodeFixedPredictionSubframe(BitInputStream in, int predOrder, int sampleDepth, long[] result)
 			throws IOException, DataFormatException {
 		for (int i = 0; i < predOrder; i++)
@@ -248,7 +293,7 @@ public final class SimpleDecodeFlacToWav {
 		{4, -6, 4, -1},
 	};
 	
-	
+	// Method to decode linear predictive coding sub frame
 	private static void decodeLinearPredictiveCodingSubframe(BitInputStream in, int lpcOrder, int sampleDepth, long[] result)
 			throws IOException, DataFormatException {
 		for (int i = 0; i < lpcOrder; i++)
@@ -262,7 +307,7 @@ public final class SimpleDecodeFlacToWav {
 		restoreLinearPrediction(result, coefs, shift);
 	}
 	
-	
+	// Method to decode residuals
 	private static void decodeResiduals(BitInputStream in, int warmup, long[] result) throws IOException, DataFormatException {
 		int method = in.readUint(2);
 		if (method >= 2)
@@ -292,7 +337,7 @@ public final class SimpleDecodeFlacToWav {
 		}
 	}
 	
-	
+	// Method to restore linear prediction
 	private static void restoreLinearPrediction(long[] result, int[] coefs, int shift) {
 		for (int i = coefs.length; i < result.length; i++) {
 			long sum = 0;
@@ -304,8 +349,9 @@ public final class SimpleDecodeFlacToWav {
 	
 }
 
-
-
+// ===============
+// Anonymous class
+// ===============
 final class BitInputStream implements AutoCloseable {
 	
 	private InputStream in;

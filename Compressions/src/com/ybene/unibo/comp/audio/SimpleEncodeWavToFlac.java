@@ -27,23 +27,20 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.zip.DataFormatException;
 
-
 public final class SimpleEncodeWavToFlac {
 	
 	public static void main(String[] args) throws IOException, DataFormatException {
+
+		// Files used
+		File inputFile = new File("./ressources/Sounds/austin_powers_sharks.wav");
+		File outputFile = new File("./ressources/Sounds/austin_powers_sharks_encoded.flac");
 		
-		if (args.length != 2) {
-			System.err.println("Usage: java SimpleEncodeWavToFlac InFile.wav OutFile.flac");
-			System.exit(1);
-			return;
-		}
-		
-		try (InputStream in = new BufferedInputStream(new FileInputStream(args[0]));
-				BitOutputStream out = new BitOutputStream(new BufferedOutputStream(new FileOutputStream(args[1])))) {
+		// Simply encode the input WAV file
+		try (InputStream in = new BufferedInputStream(new FileInputStream(inputFile));
+				BitOutputStream out = new BitOutputStream(new BufferedOutputStream(new FileOutputStream(outputFile)))) {
 			encodeFile(in, out);
 		}
-	}
-	
+}
 	
 	public static void encodeFile(InputStream in, BitOutputStream out) throws IOException, DataFormatException {
 		
