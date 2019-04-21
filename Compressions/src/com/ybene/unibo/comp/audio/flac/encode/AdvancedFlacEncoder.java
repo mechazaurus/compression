@@ -37,18 +37,21 @@ public final class AdvancedFlacEncoder {
 		@SuppressWarnings("unchecked")
 		SizeEstimate<FrameEncoder>[][] encoderInfo = new SizeEstimate[sizeMultiples.length][(numSamples + baseSize - 1) / baseSize];
 		long startTime = System.currentTimeMillis();
+		
 		for (int i = 0; i < encoderInfo[0].length; i++) {
 			double progress = (double)i / encoderInfo[0].length;
 			double timeRemain = (System.currentTimeMillis() - startTime) / 1000.0 / progress * (1 - progress);
 			System.err.printf("\rprogress=%.2f%%    timeRemain=%ds", progress * 100, Math.round(timeRemain));
 			
 			int pos = i * baseSize;
+			
 			for (int j = 0; j < encoderInfo.length; j++) {
 				int n = Math.min(sizeMultiples[j] * baseSize, numSamples - pos);
 				long[][] subsamples = getRange(samples, pos, n);
 				encoderInfo[j][i] = FrameEncoder.computeBest(pos, subsamples, info.sampleDepth, info.sampleRate, opts);
 			}
 		}
+		
 		System.err.println();
 		
 		// Initialize arrays to prepare for dynamic programming
@@ -60,8 +63,11 @@ public final class AdvancedFlacEncoder {
 		for (int i = 0; i < encoderInfo.length; i++) {
 			for (int j = bestSizes.length - 1; j >= 0; j--) {
 				long size = encoderInfo[i][j].sizeEstimate;
-				if (j + sizeMultiples[i] < bestSizes.length)
+				
+				if (j + sizeMultiples[i] < bestSizes.length) {					
 					size += bestSizes[j + sizeMultiples[i]];
+				}
+				
 				if (size < bestSizes[j]) {
 					bestSizes[j] = size;
 					bestEncoders[j] = encoderInfo[i][j].encoder;
@@ -74,14 +80,19 @@ public final class AdvancedFlacEncoder {
 		info.maxBlockSize = 0;
 		info.minFrameSize = 0;
 		info.maxFrameSize = 0;
+		
 		List<Integer> blockSizes = new ArrayList<>();
+		
 		for (int i = 0; i < bestEncoders.length; ) {
 			FrameEncoder enc = bestEncoders[i];
 			int pos = i * baseSize;
 			int n = Math.min(enc.metadata.blockSize, numSamples - pos);
 			blockSizes.add(n);
-			if (info.minBlockSize == 0 || n < info.minBlockSize)
+			
+			if (info.minBlockSize == 0 || n < info.minBlockSize) {				
 				info.minBlockSize = Math.max(n, 16);
+			}
+			
 			info.maxBlockSize = Math.max(n, info.maxBlockSize);
 			
 			long[][] subsamples = getRange(samples, pos, n);
@@ -90,15 +101,20 @@ public final class AdvancedFlacEncoder {
 			i += (n + baseSize - 1) / baseSize;
 			
 			long frameSize = out.getByteCount() - startByte;
-			if (frameSize < 0 || (int)frameSize != frameSize)
-				throw new AssertionError();
-			if (info.minFrameSize == 0 || frameSize < info.minFrameSize)
+			
+			if (frameSize < 0 || (int)frameSize != frameSize) {
+				throw new AssertionError();				
+			}
+			
+			if (info.minFrameSize == 0 || frameSize < info.minFrameSize) {				
 				info.minFrameSize = (int)frameSize;
-			if (frameSize > info.maxFrameSize)
-				info.maxFrameSize = (int)frameSize;
+			}
+			
+			if (frameSize > info.maxFrameSize) {
+				info.maxFrameSize = (int)frameSize;				
+			}
 		}
 	}
-	
 	
 	// Returns the subrange array[ : ][off : off + len] upcasted to long.
 	private static long[][] getRange(int[][] array, int off, int len) {
@@ -106,10 +122,12 @@ public final class AdvancedFlacEncoder {
 		for (int i = 0; i < array.length; i++) {
 			int[] src = array[i];
 			long[] dest = result[i];
-			for (int j = 0; j < len; j++)
+			
+			for (int j = 0; j < len; j++) {				
 				dest[j] = src[off + j];
+			}
 		}
+		
 		return result;
 	}
-	
 }

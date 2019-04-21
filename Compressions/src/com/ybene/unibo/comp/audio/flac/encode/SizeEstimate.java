@@ -23,10 +23,10 @@ package com.ybene.unibo.comp.audio.flac.encode;
 
 import java.util.Objects;
 
-
 /* 
  * Pairs an integer with an arbitrary object. Immutable structure.
  */
+
 final class SizeEstimate<E> {
 	
 	/*---- Fields ----*/
@@ -35,27 +35,27 @@ final class SizeEstimate<E> {
 	public final E encoder;  // Not null
 	
 	
-	
 	/*---- Constructors ----*/
 	
 	public SizeEstimate(long size, E enc) {
-		if (size < 0)
+		if (size < 0) {			
 			throw new IllegalArgumentException();
+		}
+		
 		sizeEstimate = size;
 		encoder = Objects.requireNonNull(enc);
 	}
-	
-	
 	
 	/*---- Methods ----*/
 	
 	// Returns this object if the size is less than or equal to the other object, otherwise returns other.
 	public SizeEstimate<E> minimum(SizeEstimate<E> other) {
 		Objects.requireNonNull(other);
-		if (sizeEstimate <= other.sizeEstimate)
+		
+		if (sizeEstimate <= other.sizeEstimate) {			
 			return this;
-		else
-			return other;
+		} else {
+			return other;			
+		}
 	}
-	
 }

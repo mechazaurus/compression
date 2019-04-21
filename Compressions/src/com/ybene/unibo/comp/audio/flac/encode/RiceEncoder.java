@@ -24,7 +24,6 @@ package com.ybene.unibo.comp.audio.flac.encode;
 import java.io.IOException;
 import java.util.Objects;
 
-
 /* 
  * Calculates/estimates the encoded size of a vector of residuals, and also performs the encoding to an output stream.
  */
@@ -39,14 +38,21 @@ final class RiceEncoder {
 	public static long computeBestSizeAndOrder(long[] data, int warmup, int maxPartOrder) {
 		// Check arguments strictly
 		Objects.requireNonNull(data);
-		if (warmup < 0 || warmup > data.length)
+		
+		if (warmup < 0 || warmup > data.length) {			
 			throw new IllegalArgumentException();
-		if (maxPartOrder < 0 || maxPartOrder > 15)
-			throw new IllegalArgumentException();
+		}
+		
+		if (maxPartOrder < 0 || maxPartOrder > 15) {
+			throw new IllegalArgumentException();			
+		}
+		
 		for (long x : data) {
 			x >>= 52;
-			if (x != 0 && x != -1)  // Check that it fits in a signed int53
-				throw new IllegalArgumentException();
+			// Check that it fits in a signed int53
+			if (x != 0 && x != -1) {
+				throw new IllegalArgumentException();				
+			}
 		}
 		
 		long bestSize = Integer.MAX_VALUE;
@@ -54,53 +60,71 @@ final class RiceEncoder {
 		
 		int[] escapeBits = null;
 		int[] bitsAtParam = null;
+		
 		for (int order = maxPartOrder; order >= 0; order--) {
 			int partSize = data.length >>> order;
-			if ((partSize << order) != data.length || partSize < warmup)
-				continue;
+			
+			if ((partSize << order) != data.length || partSize < warmup) {
+				continue;				
+			}
+			
 			int numPartitions = 1 << order;
 			
-			if (escapeBits == null) {  // And bitsAtParam == null
+			// And bitsAtParam == null
+			if (escapeBits == null) {  
 				escapeBits = new int[numPartitions];
 				bitsAtParam = new int[numPartitions * 16];
+				
 				for (int i = warmup; i < data.length; i++) {
 					int j = i / partSize;
 					long val = data[i];
 					escapeBits[j] = Math.max(65 - Long.numberOfLeadingZeros(val ^ (val >> 63)), escapeBits[j]);
 					val = (val >= 0) ? (val << 1) : (((-val) << 1) - 1);
-					for (int param = 0; param < 15; param++, val >>>= 1)
-						bitsAtParam[param + j * 16] += val + 1 + param;
+					
+					for (int param = 0; param < 15; param++, val >>>= 1) {
+						bitsAtParam[param + j * 16] += val + 1 + param;						
+					}
 				}
 			} else {  // Both arrays are non-null
 				// Logically halve the size of both arrays (but without reallocating to the true new size)
 				for (int i = 0; i < numPartitions; i++) {
 					int j = i << 1;
 					escapeBits[i] = Math.max(escapeBits[j], escapeBits[j + 1]);
-					for (int param = 0; param < 15; param++)
-						bitsAtParam[param + i * 16] = bitsAtParam[param + j * 16] + bitsAtParam[param + (j + 1) * 16];
+					
+					for (int param = 0; param < 15; param++) {
+						bitsAtParam[param + i * 16] = bitsAtParam[param + j * 16] + bitsAtParam[param + (j + 1) * 16];						
+					}
 				}
 			}
 			
 			long size = 4 + (4 << order);
+			
 			for (int i = 0; i < numPartitions; i++) {
 				int min = Integer.MAX_VALUE;
-				if (escapeBits[i] <= 31)
-					min = 5 + escapeBits[i] * (partSize - (i == 0 ? warmup : 0));
-				for (int param = 0; param < 15; param++)
-					min = Math.min(bitsAtParam[param + i * 16], min);
+				
+				if (escapeBits[i] <= 31) {
+					min = 5 + escapeBits[i] * (partSize - (i == 0 ? warmup : 0));					
+				}
+				
+				for (int param = 0; param < 15; param++) {
+					min = Math.min(bitsAtParam[param + i * 16], min);					
+				}
+				
 				size += min;
 			}
+			
 			if (size < bestSize) {
 				bestSize = size;
 				bestOrder = order;
 			}
 		}
 		
-		if (bestSize == Integer.MAX_VALUE || (bestOrder >>> 4) != 0)
-			throw new AssertionError();
+		if (bestSize == Integer.MAX_VALUE || (bestOrder >>> 4) != 0) {
+			throw new AssertionError();			
+		}
+		
 		return bestSize << 4 | bestOrder;
 	}
-	
 	
 	// Calculates the number of bits needed to encode the sequence of values
 	// data[start : end] with an optimally chosen Rice parameter.
@@ -112,17 +136,22 @@ final class RiceEncoder {
 		long bestSize;
 		{
 			long accumulator = 0;
+			
 			for (int i = start; i < end; i++) {
 				long val = data[i];
 				accumulator |= val ^ (val >> 63);
 			}
+			
 			int numBits = 65 - Long.numberOfLeadingZeros(accumulator);
 			assert 1 <= numBits && numBits <= 65;
+			
 			if (numBits <= 31) {
 				bestSize = 4 + 5 + (end - start) * numBits;
 				bestParam = 16 + numBits;
-				if ((bestParam >>> 6) != 0)
-					throw new AssertionError();
+				
+				if ((bestParam >>> 6) != 0) {
+					throw new AssertionError();					
+				}
 			} else {
 				bestSize = Long.MAX_VALUE;
 				bestParam = 0;
@@ -132,12 +161,15 @@ final class RiceEncoder {
 		// Use Rice coding
 		for (int param = 0; param <= 14; param++) {
 			long size = 4;
+			
 			for (int i = start; i < end; i++) {
 				long val = data[i];
-				if (val >= 0)
-					val <<= 1;
-				else
+				if (val >= 0) {
+					val <<= 1;					
+				} else {					
 					val = ((-val) << 1) - 1;
+				}
+				
 				size += (val >>> param) + 1 + param;
 			}
 			if (size < bestSize) {
@@ -145,10 +177,9 @@ final class RiceEncoder {
 				bestParam = param;
 			}
 		}
+		
 		return bestSize << 6 | bestParam;
 	}
-	
-	
 	
 	/*---- Functions for encoding data ---*/
 	
@@ -158,21 +189,30 @@ final class RiceEncoder {
 		// Check arguments strictly
 		Objects.requireNonNull(data);
 		Objects.requireNonNull(out);
-		if (warmup < 0 || warmup > data.length)
-			throw new IllegalArgumentException();
-		if (order < 0 || order > 15)
-			throw new IllegalArgumentException();
+		
+		if (warmup < 0 || warmup > data.length) {
+			throw new IllegalArgumentException();			
+		}
+		
+		if (order < 0 || order > 15) {
+			throw new IllegalArgumentException();			
+		}
+		
 		for (long x : data) {
 			x >>= 52;
-			if (x != 0 && x != -1)  // Check that it fits in a signed int53
-				throw new IllegalArgumentException();
+			// Check that it fits in a signed int53
+			if (x != 0 && x != -1) {
+				throw new IllegalArgumentException();				
+			}
 		}
 		
 		out.writeInt(2, 0);
 		out.writeInt(4, order);
+		
 		int numPartitions = 1 << order;
 		int start = warmup;
 		int end = data.length >>> order;
+		
 		for (int i = 0; i < numPartitions; i++) {
 			int param = (int)computeBestSizeAndParam(data, start, end) & 0x3F;
 			encode(data, start, end, param, out);
@@ -181,7 +221,6 @@ final class RiceEncoder {
 		}
 	}
 	
-	
 	// Encodes the sequence of values data[start : end] with the given Rice parameter.
 	private static void encode(long[] data, int start, int end, int param, BitOutputStream out) throws IOException {
 		assert 0 <= param && param <= 31 && data != null && out != null;
@@ -189,17 +228,20 @@ final class RiceEncoder {
 		
 		if (param < 15) {
 			out.writeInt(4, param);
-			for (int j = start; j < end; j++)
-				writeRiceSignedInt(data[j], param, out);
+			
+			for (int j = start; j < end; j++) {
+				writeRiceSignedInt(data[j], param, out);				
+			}
 		} else {
 			out.writeInt(4, 15);
 			int numBits = param - 16;
 			out.writeInt(5, numBits);
-			for (int j = start; j < end; j++)
+			
+			for (int j = start; j < end; j++) {
 				out.writeInt(numBits, (int)data[j]);
+			}
 		}
 	}
-	
 	
 	private static void writeRiceSignedInt(long val, int param, BitOutputStream out) throws IOException {
 		assert 0 <= param && param <= 31 && out != null;
@@ -207,10 +249,12 @@ final class RiceEncoder {
 		
 		long unsigned = val >= 0 ? val << 1 : ((-val) << 1) - 1;
 		int unary = (int)(unsigned >>> param);
-		for (int i = 0; i < unary; i++)
-			out.writeInt(1, 0);
+		
+		for (int i = 0; i < unary; i++) {
+			out.writeInt(1, 0);			
+		}
+		
 		out.writeInt(1, 1);
 		out.writeInt(param, (int)unsigned);
 	}
-	
 }

@@ -26,35 +26,33 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import com.ybene.unibo.comp.audio.flac.common.StreamInfo;
 import com.ybene.unibo.comp.audio.flac.decode.DataFormatException;
 import com.ybene.unibo.comp.audio.flac.decode.FlacDecoder;
 
-
 /**
  * Decodes a FLAC file to an uncompressed PCM WAV file. Overwrites output file if already exists.
  * Runs silently if successful, otherwise prints error messages to standard error.
- * <p>Usage: java DecodeFlacToWav InFile.flac OutFile.wav</p>
- * <p>Requirements on the FLAC file:</p>
- * <ul>
- *   <li>Sample depth is 8, 16, 24, or 32 bits (not 4, 17, 23, etc.)</li>
- *   <li>Contains no ID3v1 or ID3v2 tags, or other data unrecognized by the FLAC format</li>
- *   <li>Correct total number of samples (not zero) is stored in stream info block</li>
- *   <li>Every frame has a correct header, subframes do not overflow the sample depth,
- *   and other strict checks enforced by this decoder library</li>
- * </ul>
  */
+
 public final class DecodeFlacToWav {
 	
 	public static void main(String[] args) throws IOException {
 
+		// Time measurment - start
+		Instant start = Instant.now();
+		
+		// Files
 		File inFile  = new File("./ressources/Sounds/Beethoven-Symphony_5-1_encoded.flac");
 		File outFile = new File("./ressources/Sounds/Beethoven-Symphony_5-1_decoded.wav");
 		
 		// Decode input FLAC file
 		StreamInfo streamInfo;
 		int[][] samples;
+		
 		try (FlacDecoder dec = new FlacDecoder(inFile)) {
 			
 			// Handle metadata header blocks
@@ -118,6 +116,22 @@ public final class DecodeFlacToWav {
 				}
 			}
 		}
+		
+		// Time measurment - stop
+		Instant end = Instant.now();
+		// Formating and printing result
+		String time = Duration.between(start, end).toString();
+		time = time.substring(2);
+		
+		int cpt = 0;
+		char[] chars = time.toCharArray();
+		
+		while(chars[cpt] != '.') {
+			cpt++;
+		}
+		
+		time = time.substring(0, cpt + 3) + " seconds";
+		System.out.println(time);
 	}
 	
 	

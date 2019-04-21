@@ -25,10 +25,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Objects;
 
-
 /* 
  * A bit-oriented output stream, with other methods tailored for FLAC usage (such as CRC calculation).
  */
+
 public final class BitOutputStream implements AutoCloseable {
 	
 	/*---- Fields ----*/
@@ -42,8 +42,6 @@ public final class BitOutputStream implements AutoCloseable {
 	private int crc8;  // Always a uint8 value.
 	private int crc16;  // Always a uint16 value.
 	
-	
-	
 	/*---- Constructors ----*/
 	
 	// Constructs a FLAC-oriented bit output stream from the given byte-based output stream.
@@ -55,8 +53,6 @@ public final class BitOutputStream implements AutoCloseable {
 		resetCrcs();
 	}
 	
-	
-	
 	/*---- Methods ----*/
 	
 	/*-- Bit position --*/
@@ -66,32 +62,33 @@ public final class BitOutputStream implements AutoCloseable {
 		writeInt((64 - bitBufferLen) % 8, 0);
 	}
 	
-	
 	// Either returns silently or throws an exception.
 	private void checkByteAligned() {
-		if (bitBufferLen % 8 != 0)
+		if (bitBufferLen % 8 != 0) {			
 			throw new IllegalStateException("Not at a byte boundary");
+		}
 	}
-	
 	
 	/*-- Writing bitwise integers --*/
 	
 	// Writes the lowest n bits of the given value to this bit output stream.
 	// This doesn't care whether val represents a signed or unsigned integer.
 	public void writeInt(int n, int val) throws IOException {
-		if (n < 0 || n > 32)
+		if (n < 0 || n > 32) {			
 			throw new IllegalArgumentException();
+		}
 		
 		if (bitBufferLen + n > 64) {
 			flush();
 			assert bitBufferLen + n <= 64;
 		}
+		
 		bitBuffer <<= n;
 		bitBuffer |= val & ((1L << n) - 1);
 		bitBufferLen += n;
+		
 		assert 0 <= bitBufferLen && bitBufferLen <= 64;
 	}
-	
 	
 	// Writes out whole bytes from the bit buffer to the underlying stream. After this is done,
 	// only 0 to 7 bits remain in the bit buffer. Also updates the CRCs on each byte written.
@@ -103,6 +100,7 @@ public final class BitOutputStream implements AutoCloseable {
 			byteCount++;
 			crc8 ^= b;
 			crc16 ^= b << 8;
+			
 			for (int i = 0; i < 8; i++) {
 				crc8 <<= 1;
 				crc16 <<= 1;
@@ -112,10 +110,10 @@ public final class BitOutputStream implements AutoCloseable {
 				assert (crc16 >>> 16) == 0;
 			}
 		}
+		
 		assert 0 <= bitBufferLen && bitBufferLen <= 64;
 		out.flush();
 	}
-	
 	
 	/*-- CRC calculations --*/
 	
@@ -126,14 +124,16 @@ public final class BitOutputStream implements AutoCloseable {
 		crc16 = 0;
 	}
 	
-	
 	// Returns the CRC-8 hash of all the bytes written since the last call to resetCrcs()
 	// (or from the beginning of stream if reset was never called).
 	public int getCrc8() throws IOException {
 		checkByteAligned();
 		flush();
-		if ((crc8 >>> 8) != 0)
+		
+		if ((crc8 >>> 8) != 0) {			
 			throw new AssertionError();
+		}
+		
 		return crc8;
 	}
 	
@@ -148,14 +148,12 @@ public final class BitOutputStream implements AutoCloseable {
 		return crc16;
 	}
 	
-	
 	/*-- Miscellaneous --*/
 	
 	// Returns the number of bytes written since the start of the stream.
 	public long getByteCount() {
 		return byteCount + bitBufferLen / 8;
 	}
-	
 	
 	// Writes out any internally buffered bit data, closes the underlying output stream, and invalidates this
 	// bit output stream object for any future operation. Note that a BitOutputStream only uses memory but
@@ -170,5 +168,4 @@ public final class BitOutputStream implements AutoCloseable {
 			out = null;
 		}
 	}
-	
 }

@@ -24,7 +24,6 @@ package com.ybene.unibo.comp.audio.flac.encode;
 import java.io.IOException;
 import java.util.Objects;
 
-
 /* 
  * Under the fixed prediction coding mode of some order, this provides size calculations on and bitstream encoding of audio sample data.
  */
@@ -40,38 +39,42 @@ final class FixedPredictionEncoder extends SubframeEncoder {
 		long temp = RiceEncoder.computeBestSizeAndOrder(samples, order, maxRiceOrder);
 		enc.riceOrder = (int)(temp & 0xF);
 		long size = 1 + 6 + 1 + shift + order * depth + (temp >>> 4);
+		
 		return new SizeEstimate<SubframeEncoder>(size, enc);
 	}
-	
-	
 	
 	private final int order;
 	public int riceOrder;
 	
-	
 	public FixedPredictionEncoder(long[] samples, int shift, int depth, int order) {
 		super(shift, depth);
-		if (order < 0 || order >= COEFFICIENTS.length || samples.length < order)
-			throw new IllegalArgumentException();
+		
+		if (order < 0 || order >= COEFFICIENTS.length || samples.length < order) {
+			throw new IllegalArgumentException();			
+		}
+		
 		this.order = order;
 	}
-	
 	
 	public void encode(long[] samples, BitOutputStream out) throws IOException {
 		Objects.requireNonNull(samples);
 		Objects.requireNonNull(out);
-		if (samples.length < order)
-			throw new IllegalArgumentException();
+		
+		if (samples.length < order) {
+			throw new IllegalArgumentException();			
+		}
 		
 		writeTypeAndShift(8 + order, out);
 		samples = LinearPredictiveEncoder.shiftRight(samples, sampleShift);
 		
-		for (int i = 0; i < order; i++)  // Warmup
+		// Warmup
+		for (int i = 0; i < order; i++) {			
 			writeRawSample(samples[i], out);
+		}
+		
 		LinearPredictiveEncoder.applyLpc(samples, COEFFICIENTS[order], 0);
 		RiceEncoder.encode(samples, order, riceOrder, out);
 	}
-	
 	
 	// The linear predictive coding (LPC) coefficients for fixed prediction of orders 0 to 4 (inclusive).
 	private static final int[][] COEFFICIENTS = {
@@ -81,5 +84,4 @@ final class FixedPredictionEncoder extends SubframeEncoder {
 		{3, -3, 1},
 		{4, -6, 4, -1},
 	};
-	
 }

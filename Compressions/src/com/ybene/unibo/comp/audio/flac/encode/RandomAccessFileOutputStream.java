@@ -26,7 +26,6 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.util.Objects;
 
-
 /* 
  * An adapter from RandomAccessFile to OutputStream. These objects have no buffer, so seek()
  * and write() can be safely interleaved. Also, objects of this class have no direct
@@ -39,15 +38,11 @@ public final class RandomAccessFileOutputStream extends OutputStream {
 	
 	private RandomAccessFile out;
 	
-	
-	
 	/*---- Constructors ----*/
 	
 	public RandomAccessFileOutputStream(RandomAccessFile raf) {
 		this.out = Objects.requireNonNull(raf);
 	}
-	
-	
 	
 	/*---- Methods ----*/
 	
@@ -55,21 +50,17 @@ public final class RandomAccessFileOutputStream extends OutputStream {
 		return out.getFilePointer();
 	}
 	
-	
 	public void seek(long pos) throws IOException {
 		out.seek(pos);
 	}
-	
 	
 	public void write(int b) throws IOException {
 		out.write(b);
 	}
 	
-	
 	public void write(byte[] b, int off, int len) throws IOException {
 		out.write(b, off, len);
 	}
-	
 	
 	public void close() throws IOException {
 		if (out != null) {
@@ -77,5 +68,4 @@ public final class RandomAccessFileOutputStream extends OutputStream {
 			out = null;
 		}
 	}
-	
 }

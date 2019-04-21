@@ -37,19 +37,27 @@ public abstract class SubframeEncoder {
 	public static SizeEstimate<SubframeEncoder> computeBest(long[] samples, int sampleDepth, SearchOptions opt) {
 		// Check arguments
 		Objects.requireNonNull(samples);
-		if (sampleDepth < 1 || sampleDepth > 33)
-			throw new IllegalArgumentException();
+		
+		if (sampleDepth < 1 || sampleDepth > 33) {
+			throw new IllegalArgumentException();			
+		}
+		
 		Objects.requireNonNull(opt);
+		
 		for (long x : samples) {
 			x >>= sampleDepth - 1;
-			if (x != 0 && x != -1)  // Check that the input actually fits the indicated sample depth
-				throw new IllegalArgumentException();
+			// Check that the input actually fits the indicated sample depth
+			if (x != 0 && x != -1) {
+				throw new IllegalArgumentException();				
+			}
 		}
 		
 		// Encode with constant if possible
 		SizeEstimate<SubframeEncoder> result = ConstantEncoder.computeBest(samples, 0, sampleDepth);
-		if (result != null)
-			return result;
+		
+		if (result != null) {
+			return result;			
+		}
 		
 		// Detect number of trailing zero bits
 		int shift = computeWastedBits(samples);
@@ -76,7 +84,6 @@ public abstract class SubframeEncoder {
 		return result;
 	}
 	
-	
 	// Looks at each value in the array and computes the minimum number of trailing binary zeros
 	// among all the elements. For example, computedwastedBits({0b10, 0b10010, 0b1100}) = 1.
 	// If there are no elements or every value is zero (the former actually implies the latter), then
@@ -84,24 +91,25 @@ public abstract class SubframeEncoder {
 	private static int computeWastedBits(long[] data) {
 		Objects.requireNonNull(data);
 		long accumulator = 0;
-		for (long x : data)
-			accumulator |= x;
-		if (accumulator == 0)
-			return 0;
-		else {
+		
+		for (long x : data) {
+			accumulator |= x;			
+		}
+		
+		if (accumulator == 0) {
+			return 0;			
+		} else {
 			int result = Long.numberOfTrailingZeros(accumulator);
 			assert 0 <= result && result <= 63;
+			
 			return result;
 		}
 	}
-	
-	
 	
 	/*---- Instance members ----*/
 	
 	protected final int sampleShift;  // Number of bits to shift each sample right by. In the range [0, sampleDepth].
 	protected final int sampleDepth;  // Stipulate that each audio sample fits in a signed integer of this width. In the range [1, 33].
-	
 	
 	// Constructs a subframe encoder on some data array with the given right shift (wasted bits) and sample depth.
 	// Note that every element of the array must fit in a signed depth-bit integer and have at least 'shift' trailing binary zeros.
@@ -109,12 +117,13 @@ public abstract class SubframeEncoder {
 	// Subframe encoders should not retain a reference to the sample data array because the higher-level encoder may request and
 	// keep many size estimates coupled with encoder objects, but only utilize a small number of encoder objects in the end.
 	protected SubframeEncoder(int shift, int depth) {
-		if (depth < 1 || depth > 33 || shift < 0 || shift > depth)
-			throw new IllegalArgumentException();
+		if (depth < 1 || depth > 33 || shift < 0 || shift > depth) {
+			throw new IllegalArgumentException();			
+		}
+		
 		sampleShift = shift;
 		sampleDepth = depth;
 	}
-	
 	
 	// Encodes the given vector of audio sample data to the given bit output stream
 	// using the current encoding method (dictated by subclasses and field values).
@@ -122,13 +131,14 @@ public abstract class SubframeEncoder {
 	// as the array that was passed to the constructor when this encoder object was created.
 	public abstract void encode(long[] samples, BitOutputStream out) throws IOException;
 	
-	
 	// Writes the subframe header to the given output stream, based on the given
 	// type code (uint6) and this object's sampleShift field (a.k.a. wasted bits per sample).
 	protected final void writeTypeAndShift(int type, BitOutputStream out) throws IOException {
 		// Check arguments
-		if ((type >>> 6) != 0)
-			throw new IllegalArgumentException();
+		if ((type >>> 6) != 0) {
+			throw new IllegalArgumentException();			
+		}
+		
 		Objects.requireNonNull(out);
 		
 		// Write some fields
@@ -136,35 +146,41 @@ public abstract class SubframeEncoder {
 		out.writeInt(6, type);
 		
 		// Write shift value in quasi-unary
-		if (sampleShift == 0)
-			out.writeInt(1, 0);
-		else {
+		if (sampleShift == 0) {
+			out.writeInt(1, 0);	
+		} else {
 			out.writeInt(1, 1);
-			for (int i = 0; i < sampleShift - 1; i++)
+			
+			for (int i = 0; i < sampleShift - 1; i++) {				
 				out.writeInt(1, 0);
+			}
+			
 			out.writeInt(1, 1);
 		}
 	}
-	
 	
 	// Writes the given value to the output stream as a signed (sampleDepth-sampleShift) bit integer.
 	// Note that the value to being written is equal to the raw sample value shifted right by sampleShift.
 	protected final void writeRawSample(long val, BitOutputStream out) throws IOException {
 		int width = sampleDepth - sampleShift;
-		if (width < 1 || width > 33)
-			throw new IllegalStateException();
+		
+		if (width < 1 || width > 33) {
+			throw new IllegalStateException();			
+		}
+		
 		long temp = val >> (width - 1);
-		if (temp != 0 && temp != -1)
-			throw new IllegalArgumentException();
-		if (width <= 32)
-			out.writeInt(width, (int)val);
-		else {  // width == 33
+			
+		if (temp != 0 && temp != -1) {
+			throw new IllegalArgumentException();			
+		}
+		
+		if (width <= 32) {
+			out.writeInt(width, (int)val);			
+		} else {  // width == 33
 			out.writeInt(1, (int)(val >>> 32));
 			out.writeInt(32, (int)val);
 		}
 	}
-	
-	
 	
 	/*---- Helper structure ----*/
 	
@@ -193,7 +209,6 @@ public abstract class SubframeEncoder {
 		// In the range [0, 15]. Note that the FLAC subset format requires maxRiceOrder <= 8.
 		public final int maxRiceOrder;
 		
-		
 		/*-- Constructors --*/
 		
 		// Constructs a search options object based on the given values,
@@ -203,13 +218,17 @@ public abstract class SubframeEncoder {
 			if ((minFixedOrder != -1 || maxFixedOrder != -1) &&
 					!(0 <= minFixedOrder && minFixedOrder <= maxFixedOrder && maxFixedOrder <= 4))
 				throw new IllegalArgumentException();
+			
 			if ((minLpcOrder != -1 || maxLpcOrder != -1) &&
 					!(1 <= minLpcOrder && minLpcOrder <= maxLpcOrder && maxLpcOrder <= 32))
 				throw new IllegalArgumentException();
+			
 			if (lpcRoundVars < 0 || lpcRoundVars > 30)
 				throw new IllegalArgumentException();
+			
 			if (maxRiceOrder < 0 || maxRiceOrder > 15)
 				throw new IllegalArgumentException();
+			
 			
 			// Copy arguments to fields
 			this.minFixedOrder = minFixedOrder;
@@ -219,7 +238,6 @@ public abstract class SubframeEncoder {
 			this.lpcRoundVariables = lpcRoundVars;
 			this.maxRiceOrder = maxRiceOrder;
 		}
-		
 		
 		/*-- Constants for recommended defaults --*/
 		
@@ -241,7 +259,5 @@ public abstract class SubframeEncoder {
 		public static final SearchOptions LAX_MEDIUM = new SearchOptions(0, 1, 2, 22, 0, 15);
 		public static final SearchOptions LAX_BEST   = new SearchOptions(0, 1, 2, 32, 0, 15);
 		public static final SearchOptions LAX_INSANE = new SearchOptions(0, 1, 2, 32, 4, 15);
-		
 	}
-	
 }

@@ -23,7 +23,6 @@ package com.ybene.unibo.comp.audio.flac.encode;
 
 import java.io.IOException;
 
-
 /* 
  * Under the verbatim coding mode, this provides size calculations on and bitstream encoding of audio sample data.
  * Note that the size depends on the data length, shift, and bit depth, but not on the data contents.
@@ -35,15 +34,14 @@ final class VerbatimEncoder extends SubframeEncoder {
 	public static SizeEstimate<SubframeEncoder> computeBest(long[] samples, int shift, int depth) {
 		VerbatimEncoder enc = new VerbatimEncoder(samples, shift, depth);
 		long size = 1 + 6 + 1 + shift + samples.length * depth;
+		
 		return new SizeEstimate<SubframeEncoder>(size, enc);
 	}
-	
 	
 	// Constructs a constant encoder for the given data, right shift, and sample depth.
 	public VerbatimEncoder(long[] samples, int shift, int depth) {
 		super(shift, depth);
 	}
-	
 	
 	// Encodes the given vector of audio sample data to the given bit output stream using
 	// the this encoding method (and the superclass fields sampleShift and sampleDepth).
@@ -51,8 +49,9 @@ final class VerbatimEncoder extends SubframeEncoder {
 	// the same object reference) as the array that was passed to the constructor.
 	public void encode(long[] samples, BitOutputStream out) throws IOException {
 		writeTypeAndShift(1, out);
-		for (long val : samples)
+		
+		for (long val : samples) {
 			writeRawSample(val >> sampleShift, out);
+		}
 	}
-	
 }

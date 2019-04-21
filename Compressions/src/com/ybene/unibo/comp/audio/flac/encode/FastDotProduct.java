@@ -23,7 +23,6 @@ package com.ybene.unibo.comp.audio.flac.encode;
 
 import java.util.Objects;
 
-
 /* 
  * Speeds up computations of a signal vector's autocorrelation by avoiding redundant
  * arithmetic operations. Acts as a helper class for LinearPredictiveEncoder.
@@ -41,8 +40,6 @@ final class FastDotProduct {
 	// the of products of all unordered pairs of elements whose indices differ by i.
 	private double[] precomputed;
 	
-	
-	
 	/*---- Constructors ----*/
 	
 	// Constructs a fast dot product calculator over the given array, with the given maximum difference in indexes.
@@ -52,20 +49,23 @@ final class FastDotProduct {
 	public FastDotProduct(long[] data, int maxDelta) {
 		// Check arguments
 		this.data = Objects.requireNonNull(data);
-		if (maxDelta < 0 || maxDelta >= data.length)
+		
+		if (maxDelta < 0 || maxDelta >= data.length) {			
 			throw new IllegalArgumentException();
+		}
 		
 		// Precompute some dot products
 		precomputed = new double[maxDelta + 1];
 		for (int i = 0; i < precomputed.length; i++) {
 			double sum = 0;
-			for (int j = 0; i + j < data.length; j++)
-				sum += (double)data[j] * data[i + j];
+			
+			for (int j = 0; i + j < data.length; j++) {
+				sum += (double)data[j] * data[i + j];				
+			}
+			
 			precomputed[i] = sum;
 		}
 	}
-	
-	
 	
 	/*---- Methods ----*/
 	
@@ -74,24 +74,34 @@ final class FastDotProduct {
 	// with potential rounding error. Note that all the endpoints must lie within the bounds
 	// of the data array. Also, this method requires abs(off0 - off1) <= maxDelta.
 	public double dotProduct(int off0, int off1, int len) {
-		if (off0 > off1)  // Symmetric case
-			return dotProduct(off1, off0, len);
+		// Symmetric case
+		if (off0 > off1) {
+			return dotProduct(off1, off0, len);			
+		}
 		
 		// Check arguments
-		if (off0 < 0 || off1 < 0 || len < 0 || data.length - len < off1)
-			throw new IndexOutOfBoundsException();
+		if (off0 < 0 || off1 < 0 || len < 0 || data.length - len < off1) {
+			throw new IndexOutOfBoundsException();			
+		}
+		
 		assert off0 <= off1;
 		int delta = off1 - off0;
-		if (delta > precomputed.length)
-			throw new IllegalArgumentException();
+		
+		if (delta > precomputed.length) {
+			throw new IllegalArgumentException();			
+		}
 		
 		// Add up a small number of products to remove from the precomputed sum
 		double removal = 0;
-		for (int i = 0; i < off0; i++)
+		
+		for (int i = 0; i < off0; i++) {			
 			removal += (double)data[i] * data[i + delta];
-		for (int i = off1 + len; i < data.length; i++)
-			removal += (double)data[i] * data[i - delta];
+		}
+		
+		for (int i = off1 + len; i < data.length; i++) {
+			removal += (double)data[i] * data[i - delta];			
+		}
+		
 		return precomputed[delta] - removal;
 	}
-	
 }
