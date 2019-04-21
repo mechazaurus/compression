@@ -49,8 +49,8 @@ public final class DecodeFlacToWav {
 	
 	public static void main(String[] args) throws IOException {
 
-		File inFile  = new File("./ressources/Sounds/austin_powers_sharks_encoded.flac");
-		File outFile = new File("./ressources/Sounds/austin_powers_sharks_decoded.wav");
+		File inFile  = new File("./ressources/Sounds/Beethoven-Symphony_5-1_encoded.flac");
+		File outFile = new File("./ressources/Sounds/Beethoven-Symphony_5-1_decoded.wav");
 		
 		// Decode input FLAC file
 		StreamInfo streamInfo;

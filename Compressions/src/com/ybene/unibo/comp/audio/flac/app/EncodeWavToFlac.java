@@ -53,8 +53,8 @@ public final class EncodeWavToFlac {
 	
 	public static void main(String[] args) throws IOException {
 	
-		File inFile  = new File("./ressources/Sounds/austin_powers_sharks.wav");
-		File outFile = new File("./ressources/Sounds/austin_powers_sharks_encoded.flac");
+		File inFile  = new File("./ressources/Sounds/Beethoven-Symphony_5-1.wav");
+		File outFile = new File("./ressources/Sounds/Beethoven-Symphony_5-1_encoded.flac");
 		
 		// Read WAV file headers and audio sample data
 		int[][] samples;
